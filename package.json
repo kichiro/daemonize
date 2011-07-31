@@ -1,7 +1,11 @@
-{ "name" : "daemonize"
-, "version" : "0.1.0"
-, "description" : "Daemonize node"
-, "author": "Gregoire Lejeune"
-, "main": "./daemonize"
-, "scripts": { "install": "node-waf configure build" }
+{
+  "name": "daemonize",
+  "version": "0.1.0",
+  "description": "Daemonize node",
+  "author": "Gregoire Lejeune",
+  "main": "./daemonize",
+  "scripts": { "install": "node-waf configure build" },
+  "dependencies": {
+    "optimist" : ">=0.1"
+  }
 }

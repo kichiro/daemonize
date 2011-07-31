@@ -1,92 +1,93 @@
-var fs = require('fs');
-var sys = require('sys');
 var daemonize = require("./build/default/daemonize");
+var sys = require('sys');
+var path = require('path');
+var fs = require('fs');
 var restart = false;
+
+var argv = require('optimist')
+            .usage("Usage: [NODE_ENV=production|development] $0 -p [port_number]")
+            .demand(['p'])
+            .argv;
 
 var Daemonize = function() {
   this.config = {
-    pidFile: "daemonize.pid",
-    closeIO: true
+    pid_base_path: '/var/run/my_daemon',
+    closeIO: true,
+    port: 3000
   }
-}
+};
 
 Daemonize.prototype.start = function() {
   try {
-    var pid = parseInt(fs.readFileSync(this.config.pidFile));
+    var pid = parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid'));
     sys.puts("Daemon already started! (PID: #"+pid+")")
-    sys.puts("If you are sure that I'm mistaken, please remove the file "+this.config.pidFile)
+    sys.puts("If you are sure that I'm mistaken, please remove the file "+this.config.pid_base_path + '_' + this.config.port + '.pid');
     process.exit(0);
-  }
-  catch(e) {}
+  } catch (e) {}
   
-  var pid = daemonize.start(this.config.pidFile);
-  if( pid > 0 ) {
+  var pid = daemonize.start(this.config.pid_base_path + '_' + this.config.port + '.pid');
+  if (pid > 0) {
     sys.puts("Start process with PID #" + pid);
-    if( this.closeIO == true ) {
+    if (this.closeIO  == true) {
       daemonize.closeIO();
     }
     return pid;
   } else {
-    sys.puts("Daemonize process faild!");
+    sys.puts("Daeminize process failed!");
   }
 }
 
 Daemonize.prototype.stop = function() {
   try {
-    process.kill(parseInt(fs.readFileSync(this.config.pidFile)));
-    fs.unlinkSync(this.config.pidFile);
-  }
-  catch(e) {
+    process.kill(parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid')));
+    fs.unlinkSync(this.config.pid_base_path + '_' + this.config.port + '.pid');
+  } catch (e) {
     sys.puts("Daemon is not running! In fact, I did not find the PID file!");
   }
   
-  if(restart == false) {
+  if (restart == false) {
     process.exit(0);
   }
 }
 
 Daemonize.prototype.status = function() {
   try {
-    var pid = parseInt(fs.readFileSync(this.config.pidFile));
+    var pid = parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid'));
     sys.puts("Daemon is running! (PID: #"+pid+")");
-  }
-  catch(e) {
+  } catch (e) {
     sys.puts("Daemon is not running!");
   }
-  process.exit(0);  
+  process.exit(0);
 }
 
-Daemonize.prototype.daemonize = function() {
-  var args = process.argv;
-  var pid;
-
-  // Handle start stop commands
-  switch(args[2]) {
+Daemonize.prototype.daemonize = function(port) {
+  this.config.port = port;
+  var command_arg = argv._;
+  
+  switch(command_arg[0]) {
     case "stop":
       this.stop();
       break;
-
+      
     case "start":
       pid = this.start();
       break;
-  
+      
     case "restart":
       restart = true;
       this.stop();
       this.start();
       restart = false;
       break;
-
+      
     case "status":
       this.status();
       break;
-
-    case "console":
-      break;
-
+      
     default:
-      sys.puts('Usage: [start|stop|restart|console]');
+      sys.puts("Usage: [NODE_ENV=production|development] node script_file [start|stop|restart|status] [-p port_number]")
       process.exit(0);
+      break;
   }
   
   return pid;
