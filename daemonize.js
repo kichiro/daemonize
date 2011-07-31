@@ -11,7 +11,8 @@ var argv = require('optimist')
 
 var Daemonize = function() {
   this.config = {
-    pid_base_path: '/var/run/my_daemon',
+    pids_dir: '/var/run',
+    pid_base_name: 'my_daemon',
     closeIO: true,
     port: 3000
   }
@@ -19,13 +20,13 @@ var Daemonize = function() {
 
 Daemonize.prototype.start = function() {
   try {
-    var pid = parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid'));
+    var pid = parseInt(fs.readFileSync(this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid'))
     sys.puts("Daemon already started! (PID: #"+pid+")")
-    sys.puts("If you are sure that I'm mistaken, please remove the file "+this.config.pid_base_path + '_' + this.config.port + '.pid');
+    sys.puts("If you are sure that I'm mistaken, please remove the file "+this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid');
     process.exit(0);
   } catch (e) {}
   
-  var pid = daemonize.start(this.config.pid_base_path + '_' + this.config.port + '.pid');
+  var pid = daemonize.start(this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid');
   if (pid > 0) {
     sys.puts("Start process with PID #" + pid);
     if (this.closeIO  == true) {
@@ -39,8 +40,8 @@ Daemonize.prototype.start = function() {
 
 Daemonize.prototype.stop = function() {
   try {
-    process.kill(parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid')));
-    fs.unlinkSync(this.config.pid_base_path + '_' + this.config.port + '.pid');
+    process.kill(parseInt(fs.readFileSync(this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid')));
+    fs.unlinkSync(this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid');
   } catch (e) {
     sys.puts("Daemon is not running! In fact, I did not find the PID file!");
   }
@@ -52,7 +53,7 @@ Daemonize.prototype.stop = function() {
 
 Daemonize.prototype.status = function() {
   try {
-    var pid = parseInt(fs.readFileSync(this.config.pid_base_path + '_' + this.config.port + '.pid'));
+    var pid = parseInt(fs.readFileSync(this.config.pids_dir + '/' + this.config.pid_base_name + '_' + this.config.port + '.pid'));
     sys.puts("Daemon is running! (PID: #"+pid+")");
   } catch (e) {
     sys.puts("Daemon is not running!");

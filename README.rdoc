@@ -11,13 +11,29 @@ A basic example
   var app_name = 'your_app_name_here',
       express = require('express),
       path = require('path'),
+      fs = require('fs'),
       argv = require('optimist').argv,
       daemon = require('daemonize').daemon();
 
-  var port = parseInt(argv.p || argv.port || 3000);
+  // application specific variables
+  var app_name = 'zeromq3',
+      process_env = process.env.NODE_ENV || 'development',
+      port = parseInt(argv.p || argv.port || 3000),
+      pids_dir = path.join(__dirname, 'pids');
+
+  // Create pids_dir if not exists.
+  var dirs = [pids_dir];
+  for (var i=0; i<dirs.length; i++) {
+    try {
+      fs.statSync(dirs[i]);
+    } catch (e) {
+      fs.mkdirSync(dirs[i], 0777);
+    }
+  }
 
   // Daemonize config
-  daemon.config.pid_base_path = path.join(__dirname, 'pids/ + app_name);
+  daemon.config.pids_dir = pids_dir;
+  daemon.config.pid_base_name = app_name;
 
   // Daemonize
   var pid = daemon.daemonize(port);
