@@ -8,32 +8,71 @@ Copyright (C) 2010 Gregoire Lejeune
 
 A basic example
 
-  var daemon = require('daemonize').daemon();
-  var http = require('http');
+  var app_name = 'your_app_name_here',
+      express = require('express),
+      path = require('path'),
+      argv = require('optimist').argv,
+      daemon = require('daemonize').daemon();
 
-  // Configuration
-  daemon.config = {
-    pidFile: "./toto.pid",
-    closeIO: true
-  }
+  var port = parseInt(argv.p || argv.port || 3000);
+
+  // Daemonize config
+  daemon.config.pid_base_path = path.join(__dirname, 'pids/ + app_name);
 
   // Daemonize
-  var pid = daemon.daemonize();
+  var pid = daemon.daemonize(port);
 
-  // Start HTTP Server
-  http.createServer(function(req, res) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    res.write('<h1>Hello, World!</h1>');
-    res.close();
-  }).listen(8000);
+  var app = module.exports = express.createServer();
+
+  app.configure(function(){
+    app.set('views', __dirname + '/views');
+    app.set('view engine', 'jade');
+    app.use(express.bodyParser());
+    app.use(express.methodOverride());
+    app.use(app.router);
+    app.use(express.static(__dirname + '/public'));
+  });
+
+  app.configure('development', function(){
+    app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
+  });
+
+  app.configure('production', function(){
+    app.use(express.errorHandler()); 
+  });
+
+  app.get('/', function(req, res){
+    res.render('index', {
+      title: "Daemonize example"
+    });
+  });
+
+  app.listen(port);
+  console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+
 
 == INSTALLATION
 
-  $ cd ~/.node_libraries
-  $ git clone git://github.com/glejeune/daemonize.git
-  $ cd daemonize
-  $ node-waf configure build
+  $ cd /path/to/your/app
+  $ git clone git://github.com/kichiro/daemonize.git
+  $ npm install ./daemonize
 
-Or :
+== USAGE
 
-  $ npm install daemonize
+  $ cd /path/to/your/app
+  $ NODE_ENV=production node your_app.js start -p 3000
+  # This will generate /path/to/your/app/pids/your_app_name_3000.pid
+  $ NODE_ENV=production node your_app.js stop -p 3000
+  # This will kill process and unlink /path/to/your/app/pids/your_app_name_3000.pid
+  $ NODE_ENV=production node your_app.js status -p 3000
+  $ NODE_ENV=production node your_app.js restart -p 3000
+
+  $ NODE_ENV=production node your_app.js start -p 3001
+  # This will generate /path/to/your/app/pids/your_app_name_3001.pid
+  $ NODE_ENV=production node your_app.js stop -p 3001
+  # This will kill process and unlink /path/to/your/app/pids/your_app_name_3001.pid
+  # and will NOT KILL port 3000 instance.
+
+== DEPENDENCIES
+
+* node-optimist : https://github.com/substack/node-optimist
